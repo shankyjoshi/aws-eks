@@ -1,0 +1,94 @@
+apiVersion : v1
+data :
+   prometheus.yml : |
+      # my global config
+      global:
+        scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+        evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+        # scrape_timeout is set to the global default (10s).
+
+      # Alertmanager configuration
+      alerting:
+        alertmanagers:
+        - static_configs:
+          - targets:
+            # - alertmanager:9093
+
+      # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+      rule_files:
+        # - "first_rules.yml"
+        # - "second_rules.yml"
+
+      # A scrape configuration containing exactly one endpoint to scrape:
+      # Here it's Prometheus itself.
+      scrape_configs:
+        # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+        - job_name: 'prometheus'
+
+          # metrics_path defaults to '/metrics'
+          # scheme defaults to 'http'.
+
+          static_configs:
+          - targets: ['localhost:9090']
+        - job_name: 'node1'
+
+          # metrics_path defaults to '/metrics'
+          # scheme defaults to 'http'.
+
+          static_configs:
+          - targets: ['192.168.29.208:9100']
+        - job_name: 'jenkins'
+
+                # metrics_path defaults to '/metrics'
+                # scheme defaults to 'http'.
+          metrics_path: /prometheus
+          static_configs:
+          - targets: ['a53b6e84d51aa4066ac59054efdf6d2c-566017962.ap-south-1.elb.amazonaws.com:8080']
+kind : ConfigMap
+metadata :
+  name : prom-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mydeploy
+  labels:
+    name: myprom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: myprom
+  template:
+    metadata:
+      name: myprom
+      labels:
+        name: myprom
+    spec:
+      containers:
+      - name: mypromethus-con
+        image: prom/prometheus
+        volumeMounts :
+            - name : configs
+              mountPath : /etc/prometheus/prometheus.yml
+              subPath : prometheus.yml
+            
+      volumes :
+      - name : configs
+        configMap :
+          name : prom-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prom-service
+spec:
+  type: LoadBalancer
+  selector:
+    name: myprom
+  ports:
+      # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
+    - port: 9090
+      targetPort: 9090
+      # Optional field
+      # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)

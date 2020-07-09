@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graphana-deploy
+  labels:
+    name: graphana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: graphana
+  template:
+    metadata:
+      name: mygraph
+      labels:
+        name: graphana
+    spec:
+      containers:
+      - name: mygraphana-con
+        image: vimal13/grafana
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: graphana-service
+spec:
+  type: LoadBalancer
+  selector:
+    name: graphana
+  ports:
+      # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
+    - port: 3000
+      targetPort: 3000
+      # Optional field
+      # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
+      nodePort: 30002
+
+
